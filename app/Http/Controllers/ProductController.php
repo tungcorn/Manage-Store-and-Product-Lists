@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Store;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -12,7 +13,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::all()->OrderBy('created_at', 'desc');
+        $products = Product::with('store')->orderBy('created_at', 'desc')->paginate(5);
         return view('products.index', compact('products'));
     }
 
@@ -22,6 +23,8 @@ class ProductController extends Controller
     public function create()
     {
         //
+        $stores = Store::all();
+        return view('products.create', compact('stores'));
     }
 
     /**
@@ -29,7 +32,17 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Validate [cite: 52]
+        $request->validate([
+            'name' => 'required|string',
+            'price' => 'required|numeric|min:0.01', // Lớn hơn 0 [cite: 55]
+            'store_id' => 'required|exists:stores,id', // Phải tồn tại trong bảng stores [cite: 56]
+            'description' => 'nullable',
+        ]);
+
+        Product::create($request->all());
+
+        return redirect()->route('products.index')->with('success', 'Thêm sản phẩm thành công!');
     }
 
     /**
@@ -43,24 +56,40 @@ class ProductController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Product $product)
     {
-        //
+        $stores = Store::all(); // Lấy danh sách cửa hàng để hiện trong thẻ <select>
+
+        return view('products.edit', compact('product', 'stores'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Product $product)
     {
-        //
+        // Validate giống hệt lúc tạo mới (theo đề bài [cite: 66])
+        $request->validate([
+            'name' => 'required|string',      // [cite: 53]
+            'price' => 'required|numeric|min:0.01', // [cite: 55]
+            'store_id' => 'required|exists:stores,id', // [cite: 56]
+            'description' => 'nullable',      // [cite: 54]
+        ]);
+
+        // Cập nhật toàn bộ dữ liệu từ form
+        $product->update($request->all());
+
+        // Quay về trang danh sách và báo công
+        return redirect()->route('products.index')->with('success', 'Cập nhật sản phẩm thành công!');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Product $product)
     {
-        //
+        $product->delete(); // Xóa khỏi database [cite: 70]
+
+        return redirect()->route('products.index')->with('success', 'Đã xóa sản phẩm!');
     }
 }
