@@ -92,4 +92,17 @@ class ProductController extends Controller
 
         return redirect()->route('products.index')->with('success', 'Đã xóa sản phẩm!');
     }
+    public function search()
+    {
+        $query = request()->input('query');
+
+        $products = Product::where('name', 'like', '%' . $query . '%')
+            ->orWhere('description', 'like', '%' . $query . '%')
+            ->with('store')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return view('products.index', compact('products'));
+
+    }
 }
